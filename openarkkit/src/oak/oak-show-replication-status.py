@@ -153,15 +153,20 @@ def show_slaves_master_log_files():
                 slave_cursor.execute("SHOW SLAVE STATUS")
                 slave_status = slave_cursor.fetchone()
                 slave_master_log_file = slave_status["Master_Log_File"]
-                seconds_behind_master = int(slave_status["Seconds_Behind_Master"])
-                slave_cursor.close()
-                if seconds_behind_master <= options.normal_delay:
-                    status = "Good"
-                elif slave_master_log_file == current_master_log:
-                    status = "Lag"
+                seconds_behind_master = slave_status["Seconds_Behind_Master"]
+                if seconds_behind_master == None:
+                    print_error("Mysql slave not running on %s:%d" % (slave_host, slave_port,))
+                    slave_cursor.close()
                 else:
-                    status = "Far behind"
-                verbose("%s\t%d\t%s\t%s\t%s" % (slave_host, slave_port, slave_master_log_file, seconds_behind_master, status))
+                    seconds_behind_master = int(slave_status["Seconds_Behind_Master"])
+                    if seconds_behind_master <= options.normal_delay:
+                        status = "Good"
+                    elif slave_master_log_file == current_master_log:
+                        status = "Lag"
+                    else:
+                        status = "Far behind"
+                    verbose("%s\t%d\t%s\t%s\t%s" % (slave_host, slave_port, slave_master_log_file, seconds_behind_master, status))
+                    slave_cursor.close()
             except:
                 print_error("Cannot SHOW SLAVE STATUS on %s:%d" % (slave_host, slave_port,))
         finally:
@@ -189,3 +194,4 @@ try:
 finally:
     if master_connection:
         master_connection.close()
+
